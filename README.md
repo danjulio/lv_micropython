@@ -1,4 +1,83 @@
-# Micropython + lvgl
+# Micropython + lvgl ported to gCore
+This repository contains a fork of the LVGL Micropython bindings project with support for gCore.
+
+![Micropython LVGL Demo running on gCore](pictures/micropython_lvgl_demo.png)
+
+### Building
+This project was built using IDF 4.2.2 but should build on later versions as well.
+
+Start by building mpy-cross
+
+```
+make -C mpy-cross
+```
+
+Then build and load Micropython in ```ports/esp32``` with 16 bpp support (fastest)
+
+```
+make -C ports/esp32 LV_CFLAGS="-DLV_COLOR_DEPTH=16 -DLV_COLOR_16_SWAP=1" BOARD=GENERIC_SPIRAM PORT=[SERIAL_PORT] deploy
+```
+
+To build with 32 bpp support
+
+```
+make -C ports/esp32 LV_CFLAGS="-DLV_COLOR_DEPTH=32" BOARD=GENERIC_SPIRAM PORT=[SERIAL_PORT] deploy
+```
+
+where [SERIAL_PORT] specifies the serial port connected to gCore.  gCore must be turned on for the computer to recognize the port.
+
+To clean a build
+
+```
+make -C ports/esp32 BOARD=GENERIC_SPIRAM clean
+```
+
+The binary files can be found in ```ports/esp32/build-GENERIC_SPIRAM``` and are loaded as follows
+
+| File | Offset |
+| --- | --- |
+| bootloader.bin | 0x1000 |
+| partition-table.bin | 0x8000 |
+| micropython.bin | 0x10000 |
+
+### Simple Demo
+You should see a white screen at power-up or after reset.  Connect a serial terminal emulator to gCore at 115200 baud to get Micropython's REPL interface.
+
+Type the following commands into the REPL to configure drivers, start LVGL and display a simple button.
+
+```
+import lvgl as lv
+from ili9XXX import ili9488g
+from ft6x36 import ft6x36
+disp=ili9488g()
+touch=ft6x36(0, 21, 22, 100000)
+scr=lv.obj()
+btn=lv.btn(scr)
+btn.center()
+label=lv.label(btn)
+label.set_text(“Button”)
+lv.scr_load(scr)
+```
+
+Note the initialization of the ft6x36 driver specifies the GPIO pins used by gCore's I2C interface and configures the I2C clock rate to 100 kHz which is required by gCore.
+
+### Advanced Demo
+Install the [Adafruit Micropython tool](https://learn.adafruit.com/micropython-basics-load-files-and-run-code/install-ampy) which is used to load a more complex LVGL demo (picture above).
+
+Type the following command to load and run the demo (assuming you are in the top level of the repo).
+
+```
+ampy --port [SERIAL_PORT] run lib/lv_bindings/examples/advanced_demo_gcore.py
+```
+
+where [SERIAL_PORT] specifies the serial port connected to gCore.
+
+### Changes I made
+1. Modified the ```ili9XXX.py``` driver (lib/lv_bindings/driver/esp32/ili9XXX.py) to support gCore (new ili9488g class).  The driver can support either 16- or 32-bit pixels.
+2. Added a link to include ```ft6x36.py``` in the Micropython build (ports/esp32/modules).
+3. Added the demo ```advanced_demo_gcore.py``` to the lv_bindings examples.
+
+## Original README.md
 
 **Micropython bindings to LVGL for Embedded devices, Unix and JavaScript**
 
